@@ -1,0 +1,35 @@
+pipeline {
+  agent any
+
+  options {
+    timestamps()
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
+
+    stage('Build JAR') {
+      steps {
+        sh 'cd app/todo-app && ./gradlew --no-daemon clean test bootJar'
+      }
+    }
+
+    stage('Build & Deploy (Compose)') {
+      steps {
+        sh '''
+          cd /opt/devops-project
+          git fetch origin
+          git checkout main
+          git pull
+
+          COMPOSE_BAKE=false docker compose --env-file .env -f docker/docker-compose_JapparovKarim.yml up -d --build
+          docker compose --env-file .env -f docker/docker-compose_JapparovKarim.yml ps
+        '''
+      }
+    }
+  }
+}
